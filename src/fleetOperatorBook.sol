@@ -45,6 +45,20 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
     IERC20 public yieldToken;
     /// @notice The fleet operator reservation fee for the fleet order yield contract.
     uint256 public fleetOperatorReservationFee;
+    /// @notice The fleet management service fee wallet for the fleet order yield contract.
+    address public fleetOperatorReservationFeeWallet;
+
+
+    /// @notice Whether an operator is compliant.
+    mapping(address => bool) public isOperatorCompliant;
+
+
+        /// @notice Event emitted when the fleet operator reservation fee is paid
+    event FleetOperatorReserved(address indexed operator, uint256 amount);
+    /// @notice Event emitted when a fleet operator is assigned
+    event FleetOperatorAssigned(address indexed operator, uint256 indexed id);
+
+
 
     /// @notice Thrown when the id is Zero
     error InvalidId();
@@ -52,12 +66,18 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
     error IdDoesNotExist();
     /// @notice Thrown when the token address is invalid
     error InvalidAddress();
+    /// @notice Thrown when the amount is invalid
+    error InvalidAmount();
     /// @notice Thrown when the token address is already set
     error TokenAlreadySet();
     /// @notice Thrown when the user does not have enough tokens
     error NotEnoughTokens();
     /// @notice Thrown when the native token is not accepted
     error NoNativeTokenAccepted();
+    /// @notice Thrown when the operator is not compliant
+    error NotCompliant();
+    /// @notice Thrown when the operator is already compliant
+    error AlreadyCompliant();
 
 
 
@@ -82,6 +102,48 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
         if (_yieldToken == address(yieldToken)) revert TokenAlreadySet();
 
         yieldToken = IERC20(_yieldToken);
+    }
+
+
+    
+    /// @notice Set the fleet operator reservation fee for the fleet order yield contract.
+    /// @param _fleetOperatorReservationFee The fleet operator reservation fee to set.
+    function setFleetOperatorReservationFee(uint256 _fleetOperatorReservationFee) external onlyRole(SUPER_ADMIN_ROLE) {
+        fleetOperatorReservationFee = _fleetOperatorReservationFee;
+    }
+
+        /// @notice Set the compliance.
+    /// @param operators The addresses to set as compliant.
+    function setOperatorCompliance(address[] calldata operators) external onlyRole(COMPLIANCE_ROLE) {
+        if (operators.length == 0) revert InvalidAmount();
+        for (uint256 i = 0; i < operators.length; i++) {
+                if (isOperatorCompliant[operators[i]]) revert AlreadyCompliant();
+            }
+
+        for (uint256 i = 0; i < operators.length; i++) {
+            isOperatorCompliant[operators[i]] = true;
+        }
+    }
+
+
+    /// @notice Pay fee in ERC20.
+    /// @param amount The amount of the ERC20 to pay in USD with 6 decimals.
+    function payERC20(uint256 amount) internal {
+        //IERC20 tokenContract = IERC20(erc20Contract);
+        uint256 decimals = IERC20Metadata(address(yieldToken)).decimals();
+        
+        if (yieldToken.balanceOf(msg.sender) < ((amount * (10 ** decimals)) / 1e6)) revert NotEnoughTokens();
+        yieldToken.safeTransferFrom(msg.sender, address(this), ((amount * (10 ** decimals)) / 1e6));
+    }
+
+
+    function payFleetOperatorReservationFee(address operator) external nonReentrant {
+        if (operator == address(0)) revert InvalidAddress();
+        if (!isOperatorCompliant[operator]) revert NotCompliant();
+        // pay erc20 from drivers
+        payERC20( fleetOperatorReservationFee );
+        emit FleetOperatorReserved(operator, fleetOperatorReservationFee);
+        
     }
 
 
