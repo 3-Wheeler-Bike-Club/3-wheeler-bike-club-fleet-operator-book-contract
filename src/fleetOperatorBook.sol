@@ -48,16 +48,23 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
     /// @notice The fleet management service fee wallet for the fleet order yield contract.
     address public fleetOperatorReservationFeeWallet;
 
+    /// @notice The fleet operator reservation waitlist.
+    address[] private fleetOperatorReservationWaitlist;
+    
+
 
     /// @notice Whether an operator is compliant.
     mapping(address => bool) public isOperatorCompliant;
 
+    
+    /// @notice tracking fleet reservation index for each operator
+    mapping(address =>  uint256) private fleetOperatorReservationWaitlistIndex;
 
-        /// @notice Event emitted when the fleet operator reservation fee is paid
-    event FleetOperatorReserved(address indexed operator, uint256 amount);
-    /// @notice Event emitted when a fleet operator is assigned
-    event FleetOperatorAssigned(address indexed operator, uint256 indexed id);
 
+    /// @notice Event emitted when the fleet operator reservation fee is paid
+    event FleetOperatorReserved(address indexed operator, uint256 amount);  
+    /// @notice Event emitted when the fleet operator reservation fee is withdrawn
+    event FleetOperatorReservationFeeWithdrawn(address indexed token, address indexed to, uint256 amount);
 
 
     /// @notice Thrown when the id is Zero
@@ -142,11 +149,62 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
         if (!isOperatorCompliant[operator]) revert NotCompliant();
         // pay erc20 from drivers
         payERC20( fleetOperatorReservationFee );
+        addFleetOperatorReservation(operator);
         emit FleetOperatorReserved(operator, fleetOperatorReservationFee);
         
     }
 
+    /// @notice Add a fleet owner.
+    /// @param operator The address of the operator.
+    /// @param id The id of the fleet order to add.
+    function addFleetOperatorReservation(address operator) internal {
+        address[] storage operators = fleetOperatorReservationWaitlist;
+        operators.push(operator);
+        fleetOperatorReservationWaitlistIndex[operator] = operators.length - 1;
+    }
 
+
+    /// @notice Remove a fleet owner.
+    /// @param operator The address of the operator.
+    /// @param id The id of the fleet order to remove.
+    function removeFleetOperatorReservation() internal {
+        // Get the index of the orderId in the owner's fleetOwned array.
+        uint256 indexToRemove = 0;
+        uint256 lastIndex = fleetOperatorReservationWaitlist.length - 1;
+
+        // If the order being removed is not the last one, swap it with the last element.
+        if (indexToRemove != lastIndex) {
+            address lastOperator = fleetOperatorReservationWaitlist[lastIndex];
+            fleetOperatorReservationWaitlist[indexToRemove] = lastOperator;
+            // Update the index mapping for the swapped order.
+            fleetOperatorReservationWaitlistIndex[lastOperator] = indexToRemove;
+        }
+        
+        // Remove the last element and delete the mapping entry for the removed order.
+        fleetOperatorReservationWaitlist.pop();
+        delete fleetOperatorReservationWaitlistIndex[operator];
+    }
+
+
+    function getNextFleetOperatorReservation() external view nonReentrant onlyRole(SUPER_ADMIN_ROLE) returns (address[] memory) {
+        address nextOperator = fleetOperatorReservationWaitlist[0];
+        removeFleetOperatorReservation();
+        return nextOperator;
+    }
+
+
+
+    /// @notice Withdraw sales from fleet order book.
+    /// @param token The address of the ERC20 contract.
+    /// @param to The address to send the sales to.
+    function withdrawFleetOperatorReservationFee(address token, address to) external nonReentrant onlyRole(WITHDRAWAL_ROLE){
+        if (token == address(0)) revert InvalidAddress();
+        IERC20 tokenContract = IERC20(token);
+        uint256 amount = tokenContract.balanceOf(address(this));
+        if (amount == 0) revert NotEnoughTokens();
+        tokenContract.safeTransfer(to, amount);
+        emit FleetOperatorReservationFeeWithdrawn(token, to, amount);
+    }
 
     receive() external payable { revert NoNativeTokenAccepted(); }
     fallback() external payable { revert NoNativeTokenAccepted(); }
