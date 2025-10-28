@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-/// @dev Interface imports
-import { IFleetOrderYield } from "./interfaces/IFleetOrderYield.sol";
-
 /// @dev OpenZeppelin utils imports
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -39,8 +36,6 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
     bytes32 public constant WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");
 
 
-    /// @notice The fleet order book contract
-    IFleetOrderYield public fleetOrderYieldContract;
     /// @notice The yield token for the fleet order yield contract.
     IERC20 public yieldToken;
     /// @notice The fleet operator reservation fee for the fleet order yield contract.
@@ -156,7 +151,6 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
 
     /// @notice Add a fleet owner.
     /// @param operator The address of the operator.
-    /// @param id The id of the fleet order to add.
     function addFleetOperatorReservation(address operator) internal {
         address[] storage operators = fleetOperatorReservationWaitlist;
         operators.push(operator);
@@ -165,12 +159,11 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
 
 
     /// @notice Remove a fleet owner.
-    /// @param operator The address of the operator.
-    /// @param id The id of the fleet order to remove.
     function removeFleetOperatorReservation() internal {
         // Get the index of the orderId in the owner's fleetOwned array.
         uint256 indexToRemove = 0;
         uint256 lastIndex = fleetOperatorReservationWaitlist.length - 1;
+        address operatorToRemove = fleetOperatorReservationWaitlist[indexToRemove];
 
         // If the order being removed is not the last one, swap it with the last element.
         if (indexToRemove != lastIndex) {
@@ -182,11 +175,11 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
         
         // Remove the last element and delete the mapping entry for the removed order.
         fleetOperatorReservationWaitlist.pop();
-        delete fleetOperatorReservationWaitlistIndex[operator];
+        delete fleetOperatorReservationWaitlistIndex[operatorToRemove];
     }
 
 
-    function getNextFleetOperatorReservation() external view nonReentrant onlyRole(SUPER_ADMIN_ROLE) returns (address[] memory) {
+    function getNextFleetOperatorReservation() external nonReentrant onlyRole(SUPER_ADMIN_ROLE) returns (address) {
         address nextOperator = fleetOperatorReservationWaitlist[0];
         removeFleetOperatorReservation();
         return nextOperator;
@@ -267,5 +260,4 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
     function isSuperAdmin(address account) external view returns (bool) {
         return hasRole(SUPER_ADMIN_ROLE, account);
     }
-    
 }
