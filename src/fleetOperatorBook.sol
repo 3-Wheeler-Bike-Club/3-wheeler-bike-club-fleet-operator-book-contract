@@ -11,6 +11,10 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/// @dev OpenZeppelin nft imports
+import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+
 /// @title 3wb.club fleet operator book V1.0
 /// @notice Manages fleet operator serserve, waitlist & for fractional and full investments in 3-wheelers
 /// @author geeloko.eth
@@ -27,7 +31,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 /// - Provides granular control over different aspects of the contract
 /// - Enables multi-signature or DAO governance for critical functions
 
-contract FleetOperatorBook is AccessControl, ReentrancyGuard{
+contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     using SafeERC20 for IERC20;
 
     /// @notice Role definitions
@@ -42,9 +46,12 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
     uint256 public fleetOperatorReservationFee;
     /// @notice The fleet management service fee wallet for the fleet order yield contract.
     address public fleetOperatorReservationFeeWallet;
+    /// @notice The number of next fleet operator to serve.
+    uint256 public fleetOperatorToServe;
+    
 
     /// @notice The fleet operator reservation waitlist.
-    address[] private fleetOperatorReservationWaitlist;
+    //address[] private fleetOperatorReservationWaitlist;
     
 
 
@@ -53,7 +60,7 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
 
     
     /// @notice tracking fleet reservation index for each operator
-    mapping(address =>  uint256) private fleetOperatorReservationWaitlistIndex;
+    //mapping(address =>  uint256) private fleetOperatorReservationWaitlistIndex;
 
 
     /// @notice Event emitted when the fleet operator reservation fee is paid
@@ -83,7 +90,10 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
 
 
 
-    constructor() AccessControl() {
+    constructor() 
+    ERC721("FleetOperatorBook", "FOB") 
+    AccessControl() 
+    {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(SUPER_ADMIN_ROLE, msg.sender);
     }
@@ -92,8 +102,8 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
     /// @notice Override supportsInterface to handle multiple inheritance
     /// @param interfaceId The interface ID to check
     /// @return bool True if the interface is supported
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl) returns (bool) {
-        return AccessControl.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
 
@@ -131,7 +141,6 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
     /// @notice Pay fee in ERC20.
     /// @param amount The amount of the ERC20 to pay in USD with 6 decimals.
     function payERC20(uint256 amount) internal {
-        //IERC20 tokenContract = IERC20(erc20Contract);
         uint256 decimals = IERC20Metadata(address(yieldToken)).decimals();
         
         if (yieldToken.balanceOf(msg.sender) < ((amount * (10 ** decimals)) / 1e6)) revert NotEnoughTokens();
@@ -144,11 +153,11 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
         if (!isOperatorCompliant[operator]) revert NotCompliant();
         // pay erc20 from drivers
         payERC20( fleetOperatorReservationFee );
-        addFleetOperatorReservation(operator);
+        //addFleetOperatorReservation(operator);
         emit FleetOperatorReserved(operator, fleetOperatorReservationFee);
         
     }
-
+/*
     /// @notice Add a fleet owner.
     /// @param operator The address of the operator.
     function addFleetOperatorReservation(address operator) internal {
@@ -184,7 +193,7 @@ contract FleetOperatorBook is AccessControl, ReentrancyGuard{
         removeFleetOperatorReservation();
         return nextOperator;
     }
-
+*/
 
 
     /// @notice Withdraw sales from fleet order book.
