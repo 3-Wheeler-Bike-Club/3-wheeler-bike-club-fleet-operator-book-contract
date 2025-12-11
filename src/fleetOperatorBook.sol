@@ -36,9 +36,13 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
 
     /// @notice Role definitions
     bytes32 public constant SUPER_ADMIN_ROLE = keccak256("SUPER_ADMIN_ROLE");
+    bytes32 public constant FLEET_ORDER_YIELD_ROLE = keccak256("FLEET_ORDER_YIELD_ROLE");
     bytes32 public constant COMPLIANCE_ROLE = keccak256("COMPLIANCE_ROLE");
     bytes32 public constant WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");
 
+
+    /// @notice The total number of fleet operators.
+    uint256 public totalFleetOperators;
 
     /// @notice The yield token for the fleet order yield contract.
     IERC20 public yieldToken;
@@ -48,19 +52,12 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     address public fleetOperatorReservationFeeWallet;
     /// @notice The number of next fleet operator to serve.
     uint256 public fleetOperatorToServe;
-    
-
-    /// @notice The fleet operator reservation waitlist.
-    //address[] private fleetOperatorReservationWaitlist;
-    
+     
 
 
     /// @notice Whether an operator is compliant.
     mapping(address => bool) public isOperatorCompliant;
 
-    
-    /// @notice tracking fleet reservation index for each operator
-    //mapping(address =>  uint256) private fleetOperatorReservationWaitlistIndex;
 
 
     /// @notice Event emitted when the fleet operator reservation fee is paid
@@ -153,47 +150,15 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         if (!isOperatorCompliant[operator]) revert NotCompliant();
         // pay erc20 from drivers
         payERC20( fleetOperatorReservationFee );
-        //addFleetOperatorReservation(operator);
+
+        //mint reservation token
+        uint256 tokenId = totalFleetOperators++;
+        _safeMint(operator, tokenId);
+
         emit FleetOperatorReserved(operator, fleetOperatorReservationFee);
         
     }
-/*
-    /// @notice Add a fleet owner.
-    /// @param operator The address of the operator.
-    function addFleetOperatorReservation(address operator) internal {
-        address[] storage operators = fleetOperatorReservationWaitlist;
-        operators.push(operator);
-        fleetOperatorReservationWaitlistIndex[operator] = operators.length - 1;
-    }
 
-
-    /// @notice Remove a fleet owner.
-    function removeFleetOperatorReservation() internal {
-        // Get the index of the orderId in the owner's fleetOwned array.
-        uint256 indexToRemove = 0;
-        uint256 lastIndex = fleetOperatorReservationWaitlist.length - 1;
-        address operatorToRemove = fleetOperatorReservationWaitlist[indexToRemove];
-
-        // If the order being removed is not the last one, swap it with the last element.
-        if (indexToRemove != lastIndex) {
-            address lastOperator = fleetOperatorReservationWaitlist[lastIndex];
-            fleetOperatorReservationWaitlist[indexToRemove] = lastOperator;
-            // Update the index mapping for the swapped order.
-            fleetOperatorReservationWaitlistIndex[lastOperator] = indexToRemove;
-        }
-        
-        // Remove the last element and delete the mapping entry for the removed order.
-        fleetOperatorReservationWaitlist.pop();
-        delete fleetOperatorReservationWaitlistIndex[operatorToRemove];
-    }
-
-
-    function getNextFleetOperatorReservation() external nonReentrant onlyRole(SUPER_ADMIN_ROLE) returns (address) {
-        address nextOperator = fleetOperatorReservationWaitlist[0];
-        removeFleetOperatorReservation();
-        return nextOperator;
-    }
-*/
 
 
     /// @notice Withdraw sales from fleet order book.
