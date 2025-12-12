@@ -6,6 +6,10 @@ pragma solidity ^0.8.13;
 /// @author Geeloko
 
 interface IFleetOrderYield {
+    /// @notice Check if a fleet operator is available to be assigned a new fleet.
+    /// @param operator The address of the operator to check.
+    /// @return bool True if the operator is available to be assigned a new fleet.
+    function isFleetOperatorAvailable(address operator) external view returns (bool);
 
 
 }
