@@ -50,8 +50,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     uint256 public fleetOperatorReservationFee;
     /// @notice The fleet management service fee wallet for the fleet order yield contract.
     address public fleetOperatorReservationFeeWallet;
-    /// @notice The number of next fleet operator to serve.
-    uint256 public fleetOperatorToServe;
+    /// @notice The number of next fleet operator reservation to serve.
+    uint256 public fleetOperatorReservationToServe;
         
 
 
@@ -160,10 +160,12 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     }
 
 
-    function assignNextFleetOperatorReservation() external nonReentrant onlyRole(SUPER_ADMIN_ROLE) {
-        uint256 prevFleetOperator = fleetOperatorToServe;
-        fleetOperatorToServe++;
-        _burn(prevFleetOperator);
+    function assignNextFleetOperatorReservation() external nonReentrant onlyRole(SUPER_ADMIN_ROLE) returns (address) {
+        uint256 currentFleetOperatorReservation = fleetOperatorReservationToServe;
+        address currentFleetOperator = ownerOf(currentFleetOperatorReservation);
+        fleetOperatorReservationToServe++;
+        _burn(currentFleetOperatorReservation);
+        return currentFleetOperator;
     }
 
 
