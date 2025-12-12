@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+/// @dev Interface imports
+import { IFleetOrderYield } from "./interfaces/IFleetOrderYield.sol";
+
 /// @dev OpenZeppelin utils imports
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -39,13 +42,16 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     //bytes32 public constant FLEET_ORDER_YIELD_ROLE = keccak256("FLEET_ORDER_YIELD_ROLE");
     bytes32 public constant COMPLIANCE_ROLE = keccak256("COMPLIANCE_ROLE");
     bytes32 public constant WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");
+    
+
+    /// @notice The fleet order yield contract.
+    IFleetOrderYield public fleetOrderYieldContract;
+    /// @notice The yield token for the fleet order yield contract.
+    IERC20 public yieldToken;
 
 
     /// @notice The total number of fleet operators.
     uint256 public totalFleetOperators;
-
-    /// @notice The yield token for the fleet order yield contract.
-    IERC20 public yieldToken;
     /// @notice The fleet operator reservation fee for the fleet order yield contract.
     uint256 public fleetOperatorReservationFee;
     /// @notice The fleet management service fee wallet for the fleet order yield contract.
@@ -88,6 +94,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     error AlreadyCompliant();
     /// @notice Thrown when the operator is already queued in reservation waitlist
     error AlreadyQueued();
+    /// @notice Thrown when the fleet operator is not available
+    error FleetOperatorNotAvailable();
 
 
 
@@ -117,6 +125,12 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         yieldToken = IERC20(_yieldToken);
     }
 
+    /// @notice Set the fleet order yield contract.
+    /// @param _fleetOrderYieldContract The address of the fleet order yield contract.
+    function setFleetOrderYieldContract(address _fleetOrderYieldContract) external onlyRole(SUPER_ADMIN_ROLE) {
+        if (_fleetOrderYieldContract == address(0)) revert InvalidAddress();
+        fleetOrderYieldContract = IFleetOrderYield(_fleetOrderYieldContract);
+    }
 
     
     /// @notice Set the fleet operator reservation fee for the fleet order yield contract.
@@ -152,6 +166,11 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     function payFleetOperatorReservationFee(address operator) external nonReentrant {
         if (operator == address(0)) revert InvalidAddress();
         if (!isOperatorCompliant[operator]) revert NotCompliant();
+
+        //revert if operator not available
+        bool isFleetOperatorAvailable = fleetOrderYieldContract.isFleetOperatorAvailable(operator);
+        if (!isFleetOperatorAvailable) revert FleetOperatorNotAvailable();
+
 
         //revert if already in queue
         if (isFleetOperatorReservationActive[operator]) revert AlreadyQueued();
