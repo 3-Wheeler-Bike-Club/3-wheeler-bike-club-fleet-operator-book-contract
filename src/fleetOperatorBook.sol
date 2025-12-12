@@ -58,6 +58,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
 
     /// @notice Whether an operator is compliant.
     mapping(address => bool) public isOperatorCompliant;
+    /// @notice Whether an operator is active in the fleet reservation waitlist.
+    mapping(address => bool) public isFleetOperatorReservationActive;
 
 
     /// @notice Event emitted when the fleet operator reservation fee is paid
@@ -84,6 +86,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     error NotCompliant();
     /// @notice Thrown when the operator is already compliant
     error AlreadyCompliant();
+    /// @notice Thrown when the operator is already queued in reservation waitlist
+    error AlreadyQueued();
 
 
 
@@ -148,12 +152,17 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     function payFleetOperatorReservationFee(address operator) external nonReentrant {
         if (operator == address(0)) revert InvalidAddress();
         if (!isOperatorCompliant[operator]) revert NotCompliant();
+
+        //revert if already in queue
+        if (isFleetOperatorReservationActive[operator]) revert AlreadyQueued();
+        
         // pay erc20 from drivers
         payERC20( fleetOperatorReservationFee );
 
         //mint reservation token
         uint256 tokenId = totalFleetOperators++;
         _safeMint(operator, tokenId);
+        isFleetOperatorReservationActive[operator] = true;
 
         emit FleetOperatorReserved(operator, fleetOperatorReservationFee);
         
@@ -165,6 +174,7 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         address currentFleetOperator = ownerOf(currentFleetOperatorReservation);
         fleetOperatorReservationToServe++;
         _burn(currentFleetOperatorReservation);
+        isFleetOperatorReservationActive[currentFleetOperator] = false;
         return currentFleetOperator;
     }
 
