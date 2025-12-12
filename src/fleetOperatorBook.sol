@@ -36,7 +36,7 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
 
     /// @notice Role definitions
     bytes32 public constant SUPER_ADMIN_ROLE = keccak256("SUPER_ADMIN_ROLE");
-    bytes32 public constant FLEET_ORDER_YIELD_ROLE = keccak256("FLEET_ORDER_YIELD_ROLE");
+    //bytes32 public constant FLEET_ORDER_YIELD_ROLE = keccak256("FLEET_ORDER_YIELD_ROLE");
     bytes32 public constant COMPLIANCE_ROLE = keccak256("COMPLIANCE_ROLE");
     bytes32 public constant WITHDRAWAL_ROLE = keccak256("WITHDRAWAL_ROLE");
 
@@ -52,12 +52,12 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     address public fleetOperatorReservationFeeWallet;
     /// @notice The number of next fleet operator to serve.
     uint256 public fleetOperatorToServe;
-     
+        
+
 
 
     /// @notice Whether an operator is compliant.
     mapping(address => bool) public isOperatorCompliant;
-
 
 
     /// @notice Event emitted when the fleet operator reservation fee is paid
@@ -159,6 +159,12 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         
     }
 
+
+    function assignNextFleetOperatorReservation() external nonReentrant onlyRole(SUPER_ADMIN_ROLE) {
+        uint256 prevFleetOperator = fleetOperatorToServe;
+        fleetOperatorToServe++;
+        _burn(prevFleetOperator);
+    }
 
 
     /// @notice Withdraw sales from fleet order book.
