@@ -96,6 +96,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     error AlreadyQueued();
     /// @notice Thrown when the fleet operator is not available
     error FleetOperatorNotAvailable();
+    /// @notice Thrown when the reservation is attempted to be transferred
+    error ReservationNotTransferable();
 
 
 
@@ -184,7 +186,6 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         isFleetOperatorReservationActive[operator] = true;
 
         emit FleetOperatorReserved(operator, fleetOperatorReservationFee);
-        
     }
 
 
@@ -208,6 +209,21 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         if (amount == 0) revert NotEnoughTokens();
         tokenContract.safeTransfer(to, amount);
         emit FleetOperatorReservationFeeWithdrawn(token, to, amount);
+    }
+
+    function _update(
+        address to,
+        uint256 tokenId,
+        address auth
+    ) internal virtual override returns (address) {
+        address from = _ownerOf(tokenId);
+
+        // Block transfers: only allow mint (from == 0) or burn (to == 0)
+        if (from != address(0) && to != address(0)) {
+            revert ReservationNotTransferable();
+        }
+
+        return super._update(to, tokenId, auth);
     }
 
     receive() external payable { revert NoNativeTokenAccepted(); }
