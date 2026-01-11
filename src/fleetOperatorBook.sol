@@ -64,8 +64,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
 
     /// @notice Whether an operator is compliant.
     mapping(address => bool) public isOperatorCompliant;
-    /// @notice Whether an operator is active in the fleet reservation waitlist.
-    mapping(address => bool) public isFleetOperatorReservationActive;
+    /// @notice The fleet operator reservation token id.
+    mapping(address => uint256) public fleetOperatorReservationNumber;
 
 
     /// @notice Event emitted when the fleet operator reservation fee is paid
@@ -136,7 +136,7 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
 
     
     /// @notice Set the fleet operator reservation fee for the fleet order yield contract.
-    /// @param _fleetOperatorReservationFee The fleet operator reservation fee to set.
+    /// @param _fleetOperatorReservationFee The amount of the ERC20 to pay in USD with 6 decimals
     function setFleetOperatorReservationFee(uint256 _fleetOperatorReservationFee) external onlyRole(SUPER_ADMIN_ROLE) {
         fleetOperatorReservationFee = _fleetOperatorReservationFee;
     }
@@ -175,15 +175,15 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
 
 
         //revert if already in queue
-        if (isFleetOperatorReservationActive[operator]) revert AlreadyQueued();
+        if (fleetOperatorReservationNumber[operator] != 0) revert AlreadyQueued();
         
         // pay erc20 from drivers
         payERC20( fleetOperatorReservationFee );
 
         //mint reservation token
         uint256 tokenId = totalFleetOperators++;
+        fleetOperatorReservationNumber[operator] = tokenId;
         _safeMint(operator, tokenId);
-        isFleetOperatorReservationActive[operator] = true;
 
         emit FleetOperatorReserved(operator, fleetOperatorReservationFee);
     }
@@ -193,8 +193,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         uint256 currentFleetOperatorReservation = fleetOperatorReservationToServe;
         address currentFleetOperator = ownerOf(currentFleetOperatorReservation);
         fleetOperatorReservationToServe++;
+        fleetOperatorReservationNumber[currentFleetOperator] = 0;
         _burn(currentFleetOperatorReservation);
-        isFleetOperatorReservationActive[currentFleetOperator] = false;
         return currentFleetOperator;
     }
 
