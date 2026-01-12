@@ -37,6 +37,7 @@ import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     using SafeERC20 for IERC20;
 
+
     /// @notice Role definitions
     bytes32 public constant SUPER_ADMIN_ROLE = keccak256("SUPER_ADMIN_ROLE");
     //bytes32 public constant FLEET_ORDER_YIELD_ROLE = keccak256("FLEET_ORDER_YIELD_ROLE");
@@ -59,8 +60,6 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     /// @notice The number of next fleet operator reservation to serve.
     uint256 public fleetOperatorReservationToServe;
         
-
-
 
     /// @notice Whether an operator is compliant.
     mapping(address => bool) public isOperatorCompliant;
@@ -127,6 +126,7 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         yieldToken = IERC20(_yieldToken);
     }
 
+
     /// @notice Set the fleet order yield contract.
     /// @param _fleetOrderYieldContract The address of the fleet order yield contract.
     function setFleetOrderYieldContract(address _fleetOrderYieldContract) external onlyRole(SUPER_ADMIN_ROLE) {
@@ -141,7 +141,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         fleetOperatorReservationFee = _fleetOperatorReservationFee;
     }
 
-        /// @notice Set the compliance.
+
+    /// @notice Set the compliance.
     /// @param operators The addresses to set as compliant.
     function setOperatorCompliance(address[] calldata operators) external onlyRole(COMPLIANCE_ROLE) {
         if (operators.length == 0) revert InvalidAmount();
@@ -165,6 +166,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     }
 
 
+    /// @notice Pay the fleet operator reservation fee.
+    /// @param operator The address of the operator.
     function payFleetOperatorReservationFee(address operator) external nonReentrant {
         if (operator == address(0)) revert InvalidAddress();
         if (!isOperatorCompliant[operator]) revert NotCompliant();
@@ -189,6 +192,8 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     }
 
 
+    /// @notice Assign the next fleet operator reservation.
+    /// @return The address of the next fleet operator reservation.
     function assignNextFleetOperatorReservation() external nonReentrant onlyRole(SUPER_ADMIN_ROLE) returns (address) {
         uint256 currentFleetOperatorReservation = fleetOperatorReservationToServe;
         address currentFleetOperator = ownerOf(currentFleetOperatorReservation);
@@ -211,6 +216,12 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         emit FleetOperatorReservationFeeWithdrawn(token, to, amount);
     }
 
+
+    /// @notice Override the _update function to block transfers.
+    /// @param to The address to transfer the token to.
+    /// @param tokenId The token id to transfer.
+    /// @param auth The address to authorize the transfer.
+    /// @return The address of the new owner.
     function _update(
         address to,
         uint256 tokenId,
