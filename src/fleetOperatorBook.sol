@@ -85,8 +85,6 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
     error TokenAlreadySet();
     /// @notice Thrown when the user does not have enough tokens
     error NotEnoughTokens();
-    /// @notice Thrown when the native token is not accepted
-    error NoNativeTokenAccepted();
     /// @notice Thrown when the operator is not compliant
     error NotCompliant();
     /// @notice Thrown when the operator is already compliant
@@ -236,9 +234,6 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
 
         return super._update(to, tokenId, auth);
     }
-
-    receive() external payable { revert NoNativeTokenAccepted(); }
-    fallback() external payable { revert NoNativeTokenAccepted(); }
     
     // =================================================== ADMIN MANAGEMENT ====================================================
 
