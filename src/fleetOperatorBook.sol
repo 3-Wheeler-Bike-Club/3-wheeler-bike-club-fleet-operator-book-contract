@@ -182,7 +182,7 @@ contract FleetOperatorBook is ERC721, AccessControl, ReentrancyGuard{
         payERC20( fleetOperatorReservationFee );
 
         //mint reservation token
-        uint256 tokenId = totalFleetOperators++;
+        uint256 tokenId = ++totalFleetOperators;
         fleetOperatorReservationNumber[operator] = tokenId;
         _safeMint(operator, tokenId);
 
